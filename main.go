@@ -9,10 +9,12 @@ import (
 	"github.com/zmb3/spotify"
 	"log"
 	"net/http"
+	"os"
 )
 
-const indexpage = "http://localhost:8080/"
-const redirectURI = "http://localhost:8080/callback"
+// CHANGE AT YOUR OWN WILL
+//const redirectURI = "http://localhost:8080/callback"
+const redirectURI = "https://thawing-tor-40623.herokuapp.com/callback"
 
 var (
 	auth = spotify.NewAuthenticator(
@@ -38,23 +40,28 @@ type SpotifySongs struct {
 
 func (c *AuthorizedClient) index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Welcome to front page")
+	tok, err := c.client.Token()
+	if err != nil {
+		fmt.Println(err)
+	}
 	user, err := c.client.CurrentUser()
 	if err != nil {
 		fmt.Println(err)
 	}
 	fmt.Fprintln(w, "You are logged in as:", user.ID)
+	fmt.Fprintln(w, "You are logged in as:", tok.AccessToken)
 }
 
 func (c *AuthorizedClient) completeAuth(w http.ResponseWriter, r *http.Request) {
 	tok, err := auth.Token(state, r)
 	if err != nil {
 		http.Error(w, "Couldn't get token", http.StatusForbidden)
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 	// Checks if the state matches.
 	if st := r.FormValue("state"); st != state {
 		http.NotFound(w, r)
-		log.Fatalf("State mismatch: %s != %s\n", st, state)
+		fmt.Println("State mismatch: %s != %s\n", st, state)
 	}
 	// use token to get authenticated client
 	c.client = auth.NewClient(tok)
@@ -124,17 +131,25 @@ func (c *AuthorizedClient) recommendations(w http.ResponseWriter, r *http.Reques
 	errCheck(err)
 }
 
+func authorize(w http.ResponseWriter, r *http.Request) {
+	url := auth.AuthURL(state)
+	http.Redirect(w, r, url, 302)
+}
+
 func main() {
 	// returns a router object from the Gorilla/mux package.
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
 	var router = mux.NewRouter()
 	client := &AuthorizedClient{}
 	router.HandleFunc("/", client.index).Methods("GET")
+	router.HandleFunc("/auth", authorize).Methods("GET")
 	router.HandleFunc("/callback", client.completeAuth).Methods("GET")
 	router.HandleFunc("/recommendations", client.recommendations).Methods("GET")
 
-	url := auth.AuthURL(state)
-	fmt.Println("Please log in to Spotify by visiting the following page in your browser:", url)
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Fatal(http.ListenAndServe(":"+port, router))
 }
 
 func errCheck(err error) {
