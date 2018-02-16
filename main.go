@@ -22,7 +22,7 @@ var (
 		spotify.ScopeUserModifyPlaybackState,
 		spotify.ScopeUserReadRecentlyPlayed,
 		spotify.ScopeUserReadPlaybackState)
-	state = uuid.Must(uuid.NewV4()).String()
+	state = uuid.NewV4().String()
 )
 
 // AuthorizedClient is a client ready to be used for API calls.
