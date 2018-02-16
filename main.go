@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/marante/JMR/utils"
 	uuid "github.com/satori/go.uuid"
 	"github.com/zmb3/spotify"
@@ -25,6 +26,7 @@ var (
 		spotify.ScopeUserReadRecentlyPlayed,
 		spotify.ScopeUserReadPlaybackState)
 	state = uuid.NewV4().String()
+	store *sessions.CookieStore
 )
 
 // AuthorizedClient is a client ready to be used for API calls.
@@ -40,16 +42,11 @@ type SpotifySongs struct {
 
 func (c *AuthorizedClient) index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "Welcome to front page")
-	tok, err := c.client.Token()
-	if err != nil {
-		fmt.Println(err)
-	}
 	user, err := c.client.CurrentUser()
 	if err != nil {
 		fmt.Println(err)
 	}
 	fmt.Fprintln(w, "You are logged in as:", user.ID)
-	fmt.Fprintln(w, "You are logged in as:", tok.AccessToken)
 }
 
 func (c *AuthorizedClient) completeAuth(w http.ResponseWriter, r *http.Request) {
