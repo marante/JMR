@@ -3,154 +3,122 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/marante/JMR/Spotify"
 	"github.com/marante/JMR/utils"
-	uuid "github.com/satori/go.uuid"
-	"github.com/zmb3/spotify"
+	_ "github.com/zmb3/spotify"
 	"log"
 	"net/http"
 	"os"
 )
 
-// CHANGE AT YOUR OWN WILL
-//const redirectURI = "http://localhost:8080/callback"
-const redirectURI = "https://thawing-tor-40623.herokuapp.com/callback"
-
 var (
-	auth = spotify.NewAuthenticator(
-		redirectURI,
-		spotify.ScopeUserReadCurrentlyPlaying,
-		spotify.ScopeUserReadPlaybackState,
-		spotify.ScopeUserModifyPlaybackState,
-		spotify.ScopeUserReadRecentlyPlayed,
-		spotify.ScopeUserReadPlaybackState)
-	state = uuid.NewV4().String()
 	store *sessions.CookieStore
 )
 
-// AuthorizedClient is a client ready to be used for API calls.
-type AuthorizedClient struct {
-	client spotify.Client
+// UserInfo provides information from the users mobilephone, which are needed for recommendation
+type UserInfo struct {
+	Token      string `json:"token,omitempty"`
+	DeviceName string `json:"deviceName,omitempty"`
+	Context    struct {
+		Time   string `json:"time,omitempty"`
+		Loc    string `json:"loc,omitempty"`
+		Motion string `json:"motion,omitempty"`
+		Bpm    string `json:"bpm,omitempty"`
+	} `json:"context,omitempty"`
 }
 
-// SpotifySongs struct containing information we want to send to endpoints.
-type SpotifySongs struct {
-	TrackURIs []spotify.URI
-	Songs     []string
+// Below code simplifies and makes error handling for handlers more concrete.
+type appError struct {
+	Error   error
+	Message string
+	Code    int
 }
 
-func (c *AuthorizedClient) index(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome to front page")
-	user, err := c.client.CurrentUser()
-	if err != nil {
-		fmt.Println(err)
+type appHandler func(http.ResponseWriter, *http.Request) *appError
+
+func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if err := ah(w, r); err != nil {
+		http.Error(w, err.Message, err.Code)
 	}
-	fmt.Fprintln(w, "You are logged in as:", user.ID)
 }
 
-func (c *AuthorizedClient) completeAuth(w http.ResponseWriter, r *http.Request) {
-	tok, err := auth.Token(state, r)
-	if err != nil {
-		http.Error(w, "Couldn't get token", http.StatusForbidden)
-		fmt.Println(err)
-	}
-	// Checks if the state matches.
-	if st := r.FormValue("state"); st != state {
-		http.NotFound(w, r)
-		fmt.Println("State mismatch: %s != %s\n", st, state)
-	}
-	// use token to get authenticated client
-	c.client = auth.NewClient(tok)
-	http.Redirect(w, r, "/", 302)
+type something struct {
+	Token    string
+	DeviceID string
+	Context  *context
 }
 
-func (c *AuthorizedClient) recommendations(w http.ResponseWriter, r *http.Request) {
-	// used for seeds.
-	var genres []string
-	var artists []*spotify.FullArtist
-	// Getting the 50 recently played tracks for a given user
-	opts := &spotify.RecentlyPlayedOptions{Limit: 50}
-	tracks, err := c.client.PlayerRecentlyPlayedOpt(opts)
-	errCheck(err)
-
-	// Looping over the result to extract artists
-	for _, val := range tracks {
-		for _, artist := range val.Track.Artists {
-			item, err := c.client.GetArtist(artist.ID)
-			if err != nil {
-				log.Fatal(err)
-			}
-			artists = append(artists, item)
-		}
-	}
-
-	for _, item := range artists {
-		genres = append(genres, item.Genres...)
-	}
-
-	// Passing tracks and genres.
-	seeds := utils.Seed(tracks, genres)
-
-	attr := spotify.
-		NewTrackAttributes().
-		MinTempo(120).
-		MinEnergy(0.7).
-		MinValence(0.6)
-
-	rec, err := c.client.GetRecommendations(seeds, attr, nil)
-	errCheck(err)
-
-	// REGION TESTING WILL REMOVE LATER (WHY U NO HEFF REGIONS)
-	var trackURIs []spotify.URI
-	var trackNames []string
-
-	for _, item := range rec.Tracks {
-		trackURIs = append(trackURIs, item.URI)
-		trackNames = append(trackNames, item.Name)
-	}
-
-	seedInfo := SpotifySongs{
-		TrackURIs: trackURIs,
-		Songs:     trackNames,
-	}
-
-	playOpts := spotify.PlayOptions{
-		URIs: trackURIs,
-	}
-
-	err = c.client.PlayOpt(&playOpts)
-	errCheck(err)
-	// REGION TESTING WILL REMOVE LATER (WHY U NO HEFF REGIONS)
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(seedInfo)
-	errCheck(err)
-}
-
-func authorize(w http.ResponseWriter, r *http.Request) {
-	url := auth.AuthURL(state)
-	http.Redirect(w, r, url, 302)
+type context struct {
+	Activity string
 }
 
 func main() {
-	// returns a router object from the Gorilla/mux package.
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 	var router = mux.NewRouter()
-	client := &AuthorizedClient{}
-	router.HandleFunc("/", client.index).Methods("GET")
-	router.HandleFunc("/auth", authorize).Methods("GET")
-	router.HandleFunc("/callback", client.completeAuth).Methods("GET")
-	router.HandleFunc("/recommendations", client.recommendations).Methods("GET")
-
-	log.Fatal(http.ListenAndServe(":"+port, router))
+	router.Handle("/", appHandler(Index)).Methods("GET")
+	router.Handle("/recommend", appHandler(Recommendations)).Methods("POST")
+	log.Fatal(http.ListenAndServe(":"+port, handlers.LoggingHandler(os.Stdout, router)))
 }
 
-func errCheck(err error) {
+func Index(w http.ResponseWriter, r *http.Request) *appError {
+	fmt.Fprintf(w, "The server is currently up and active. Works as inteded.")
+	return nil
+}
+
+func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
+	decoder := json.NewDecoder(r.Body)
+	var t UserInfo
+	if err := decoder.Decode(&t); err != nil {
+		return &appError{err, "Error trying to decode JSON body.", 415}
+	}
+	defer r.Body.Close()
+
+	// used for seeds.
+	var artists []Spotify.SimpleArtist
+	// Getting the 50 recently played tracks for a given user
+	opts := &Spotify.RecentlyPlayedOptions{Limit: 50}
+	tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, opts)
 	if err != nil {
 		fmt.Println(err)
 	}
+
+	// Looping over the result to extract artists
+	for _, val := range tracks {
+		for _, artist := range val.Track.Artists {
+			artists = append(artists, artist)
+		}
+	}
+
+	fmt.Println(tracks)
+
+	seeds := utils.Seed(tracks)
+	attr := Spotify.
+		NewTrackAttributes().
+		MinTempo(120).
+		MinEnergy(0.7).
+		MinValence(0.6)
+
+	recommendations, err := Spotify.GetRecommendations(seeds, attr, nil, t.Token)
+	if err != nil {
+		fmt.Println("Error getting the recently played tracks", err)
+	}
+
+	var names []string
+
+	for _, val := range recommendations.Tracks {
+		names = append(names, val.Name)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(names)
+	if err != nil {
+		return &appError{err, "Error encoding data to JSON", 415}
+	}
+	return nil
 }

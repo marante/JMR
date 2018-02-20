@@ -2,7 +2,7 @@ package utils
 
 import (
 	"fmt"
-	"github.com/zmb3/spotify"
+	"github.com/marante/JMR/Spotify"
 	"sort"
 )
 
@@ -42,14 +42,14 @@ func MapReduce(wordFrequencies map[string]int) []Pair {
 
 // Comparator compares values in []Pair structs to determine which has the highest values.
 // Song artist genre
-func Comparator(ss ...[]Pair) spotify.Seeds {
-	seeds := spotify.Seeds{}
-	for i := 0; i < 4; i++ {
+func Comparator(ss ...[]Pair) Spotify.Seeds {
+	seeds := Spotify.Seeds{}
+	for i := 0; i < 5; i++ {
 		if ss[0][0].Value > ss[1][0].Value {
-			seeds.Tracks = append(seeds.Tracks, spotify.ID(ss[0][0].Key))
+			seeds.Tracks = append(seeds.Tracks, Spotify.ID(ss[0][0].Key))
 			ss[0] = ss[0][1:]
 		} else {
-			seeds.Artists = append(seeds.Artists, spotify.ID(ss[1][0].Key))
+			seeds.Artists = append(seeds.Artists, Spotify.ID(ss[1][0].Key))
 			ss[1] = ss[1][1:]
 		}
 	}
