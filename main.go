@@ -62,12 +62,35 @@ func main() {
 	}
 	var router = mux.NewRouter()
 	router.Handle("/", appHandler(Index)).Methods("GET")
-	router.Handle("/recommend", appHandler(Recommendations)).Methods("POST")
+	router.Handle("/recently", appHandler(RecentlyPlayed)).Methods("POST")
+	router.Handle("/recommendations", appHandler(Recommendations)).Methods("POST")
 	log.Fatal(http.ListenAndServe(":"+port, handlers.LoggingHandler(os.Stdout, router)))
 }
 
 func Index(w http.ResponseWriter, r *http.Request) *appError {
-	fmt.Fprintf(w, "The server is currently up and active. Works as inteded.")
+	fmt.Fprintf(w, "The server is currently up and active.")
+	return nil
+}
+
+func RecentlyPlayed(w http.ResponseWriter, r *http.Request) *appError {
+	decoder := json.NewDecoder(r.Body)
+	var t UserInfo
+	if err := decoder.Decode(&t); err != nil {
+		return &appError{err, "Error trying to decode JSON body.", 415}
+	}
+	defer r.Body.Close()
+	// Getting the 50 recently played tracks for a given user
+	opts := &Spotify.RecentlyPlayedOptions{Limit: 50}
+	tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, opts)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(tracks)
+	if err != nil {
+		return &appError{err, "Error encoding data to JSON", 415}
+	}
 	return nil
 }
 
@@ -85,7 +108,7 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 	opts := &Spotify.RecentlyPlayedOptions{Limit: 50}
 	tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, opts)
 	if err != nil {
-		fmt.Println(err)
+		return &appError{err, "Error trying to retrieve recently played tracks.", 400}
 	}
 
 	// Looping over the result to extract artists
@@ -94,8 +117,6 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 			artists = append(artists, artist)
 		}
 	}
-
-	fmt.Println(tracks)
 
 	seeds := utils.Seed(tracks)
 	attr := Spotify.
@@ -106,7 +127,7 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 
 	recommendations, err := Spotify.GetRecommendations(seeds, attr, nil, t.Token)
 	if err != nil {
-		fmt.Println("Error getting the recently played tracks", err)
+		return &appError{err, "Error trying to retrieve recommendations.", 400}
 	}
 
 	var names []string

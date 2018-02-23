@@ -37,6 +37,10 @@ func MapReduce(wordFrequencies map[string]int) []Pair {
 		return ss[i].Value > ss[j].Value
 	})
 
+	if len(ss) < 5 {
+		return ss[:len(ss)]
+	}
+
 	return ss[:5]
 }
 
