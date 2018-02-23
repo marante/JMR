@@ -130,10 +130,10 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 		return &appError{err, "Error trying to retrieve recommendations.", 400}
 	}
 
-	var names []string
+	var names []Spotify.URI
 
 	for _, val := range recommendations.Tracks {
-		names = append(names, val.Name)
+		names = append(names, val.URI)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
