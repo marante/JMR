@@ -49,12 +49,22 @@ func MapReduce(wordFrequencies map[string]int) []Pair {
 func Comparator(ss ...[]Pair) Spotify.Seeds {
 	seeds := Spotify.Seeds{}
 	for i := 0; i < 5; i++ {
-		if ss[0][0].Value > ss[1][0].Value {
+		if len(ss[0]) == 0 && len(ss[1]) == 0 {
+			break
+		} else if len(ss[0]) == 0 {
+			seeds.Artists = append(seeds.Artists, Spotify.ID(ss[1][0].Key))
+			ss[1] = ss[1][1:]
+		} else if len(ss[1]) == 0 {
 			seeds.Tracks = append(seeds.Tracks, Spotify.ID(ss[0][0].Key))
 			ss[0] = ss[0][1:]
 		} else {
-			seeds.Artists = append(seeds.Artists, Spotify.ID(ss[1][0].Key))
-			ss[1] = ss[1][1:]
+			if ss[0][0].Value > ss[1][0].Value {
+				seeds.Tracks = append(seeds.Tracks, Spotify.ID(ss[0][0].Key))
+				ss[0] = ss[0][1:]
+			} else {
+				seeds.Artists = append(seeds.Artists, Spotify.ID(ss[1][0].Key))
+				ss[1] = ss[1][1:]
+			}
 		}
 	}
 
