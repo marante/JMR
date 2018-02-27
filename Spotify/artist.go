@@ -1,11 +1,10 @@
 package Spotify
 
+// SimpleArtist returns a simple artist object explained in the Spotify web api.
 type SimpleArtist struct {
-	Name string `json:"name"`
-	ID   ID     `json:"id"`
-	// The Spotify URI for the artist.
-	URI URI `json:"uri"`
-	// A link to the Web API enpoint providing full details of the artist.
+	Name         string            `json:"name"`
+	ID           ID                `json:"id"`
+	URI          URI               `json:"uri"`
 	Endpoint     string            `json:"href"`
 	ExternalURLs map[string]string `json:"external_urls"`
 }

@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"github.com/marante/JMR/Spotify"
 )
 
@@ -12,8 +11,9 @@ var (
 
 // Seed returns a spotify.Seed object containing exactly 5 or less items.
 // These will be used for the seed
-func Seed(tracks []Spotify.RecentlyPlayedItem) Spotify.Seeds {
+func Seed(tracks []Spotify.RecentlyPlayedItem, contextTrackIds []string) Spotify.Seeds {
 	// artists & songs
+	songs = append(songs, contextTrackIds...)
 	for _, items := range tracks {
 		songs = append(songs, items.Track.ID.String())
 		for _, item := range items.Track.Artists {
@@ -21,17 +21,16 @@ func Seed(tracks []Spotify.RecentlyPlayedItem) Spotify.Seeds {
 		}
 	}
 
+	// Make map to hold items and keep which seeds are artists and songs.
 	m := make(map[string]map[string]int)
-
 	m["Songs"] = MakeMap(songs)
 	m["Artists"] = MakeMap(artists)
 
+	// Reduce it down to 5 of each
 	songOrder := MapReduce(m["Songs"])
 	artistOrder := MapReduce(m["Artists"])
 
+	// Compare entries, and see which has the highest hitrate.
 	seeds := Comparator(songOrder, artistOrder)
-
-	fmt.Println("# of artistseeds: ", len(seeds.Artists))
-	fmt.Println("# of trackseeds: ", len(seeds.Tracks))
 	return seeds
 }

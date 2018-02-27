@@ -18,18 +18,6 @@ var (
 	store *sessions.CookieStore
 )
 
-// UserInfo provides information from the users mobilephone, which are needed for recommendation
-type UserInfo struct {
-	Token      string `json:"token,omitempty"`
-	DeviceName string `json:"deviceName,omitempty"`
-	Context    struct {
-		Time   string `json:"time,omitempty"`
-		Loc    string `json:"loc,omitempty"`
-		Motion string `json:"motion,omitempty"`
-		Bpm    string `json:"bpm,omitempty"`
-	} `json:"context,omitempty"`
-}
-
 // Below code simplifies and makes error handling for handlers more concrete.
 type appError struct {
 	Error   error
@@ -43,16 +31,6 @@ func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := ah(w, r); err != nil {
 		http.Error(w, err.Message, err.Code)
 	}
-}
-
-type something struct {
-	Token    string
-	DeviceID string
-	Context  *context
-}
-
-type context struct {
-	Activity string
 }
 
 func main() {
@@ -74,9 +52,10 @@ func Index(w http.ResponseWriter, r *http.Request) *appError {
 
 func RecentlyPlayed(w http.ResponseWriter, r *http.Request) *appError {
 	decoder := json.NewDecoder(r.Body)
-	var t UserInfo
+	var t Spotify.UserInfo
 	if err := decoder.Decode(&t); err != nil {
-		return &appError{err, "Error trying to decode JSON body.", 415}
+		fmt.Println(err)
+		return &appError{err, "Error trying to decode JSON body.", 400}
 	}
 	defer r.Body.Close()
 	// Getting the 50 recently played tracks for a given user
@@ -84,62 +63,59 @@ func RecentlyPlayed(w http.ResponseWriter, r *http.Request) *appError {
 	tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, opts)
 	if err != nil {
 		fmt.Println(err)
+		return &appError{err, "Error trying to decode JSON body.", 400}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(tracks)
 	if err != nil {
-		return &appError{err, "Error encoding data to JSON", 415}
+		fmt.Println(err)
+		return &appError{err, "Error encoding data to JSON", 400}
 	}
 	return nil
 }
 
 func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 	decoder := json.NewDecoder(r.Body)
-	var t UserInfo
+	var t Spotify.UserInfo
 	if err := decoder.Decode(&t); err != nil {
-		return &appError{err, "Error trying to decode JSON body.", 415}
+		fmt.Println(err)
+		return &appError{err, "Error trying to decode JSON body.", 400}
 	}
 	defer r.Body.Close()
 
-	// used for seeds.
-	var artists []Spotify.SimpleArtist
 	// Getting the 50 recently played tracks for a given user
 	opts := &Spotify.RecentlyPlayedOptions{Limit: 50}
 	tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, opts)
 	if err != nil {
+		fmt.Println(err)
 		return &appError{err, "Error trying to retrieve recently played tracks.", 400}
 	}
 
-	// Looping over the result to extract artists
-	for _, val := range tracks {
-		for _, artist := range val.Track.Artists {
-			artists = append(artists, artist)
-		}
-	}
+	seeds := utils.Seed(tracks, t.Context.ContextTracks)
+	attr := utils.AttributeSelector(&t)
+	fmt.Println(attr)
+	options := utils.OptionsSelector(&t)
+	fmt.Println(options)
 
-	seeds := utils.Seed(tracks)
-	attr := Spotify.
-		NewTrackAttributes().
-		MinTempo(120).
-		MinEnergy(0.7).
-		MinValence(0.6)
-
-	recommendations, err := Spotify.GetRecommendations(seeds, attr, nil, t.Token)
+	// There might be occasions when this returns > 5 values, which is OK.
+	recommendations, err := Spotify.GetRecommendations(seeds, attr, options, t.Token)
 	if err != nil {
+		fmt.Println(err)
 		return &appError{err, "Error trying to retrieve recommendations.", 400}
 	}
 
-	var names []Spotify.URI
+	var uris []Spotify.URI
 
 	for _, val := range recommendations.Tracks {
-		names = append(names, val.URI)
+		uris = append(uris, val.URI)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(names)
+	err = json.NewEncoder(w).Encode(uris)
 	if err != nil {
-		return &appError{err, "Error encoding data to JSON", 415}
+		fmt.Println(err)
+		return &appError{err, "Error encoding data to JSON", 400}
 	}
 	return nil
 }
