@@ -6,11 +6,10 @@ import (
 )
 
 func AttributeSelector(user *Spotify.UserInfo) *Spotify.TrackAttributes {
-	var bpm float64
 	if user.Context.Bpm != 0 {
-		bpm = float64(user.Context.Bpm)
+		return Spotify.NewTrackAttributes().MinTempo(float64(user.Context.Bpm))
 	}
-	return Spotify.NewTrackAttributes().MinTempo(bpm)
+	return nil
 }
 
 func OptionsSelector(user *Spotify.UserInfo) *Spotify.Options {
@@ -19,7 +18,7 @@ func OptionsSelector(user *Spotify.UserInfo) *Spotify.Options {
 	upper := strings.ToUpper(user.Context.Country)
 	if user.Context.Country != "" {
 		options.Country = &upper
-		options.Limit = &limit
 	}
+	options.Limit = &limit
 	return &options
 }
