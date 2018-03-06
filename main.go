@@ -109,6 +109,8 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 		return &appError{err, "Error trying to retrieve recommendations.", 400}
 	}
 
+	fmt.Println(len(recommendations.Tracks))
+
 	var trackObjs []trackObject
 
 	for _, val := range recommendations.Tracks {
@@ -118,8 +120,6 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 		}
 		trackObjs = append(trackObjs, item)
 	}
-
-	fmt.Println(trackObjs)
 
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(trackObjs)

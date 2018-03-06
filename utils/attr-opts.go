@@ -15,9 +15,11 @@ func AttributeSelector(user *Spotify.UserInfo) *Spotify.TrackAttributes {
 
 func OptionsSelector(user *Spotify.UserInfo) *Spotify.Options {
 	var options Spotify.Options
+	limit := 5
+	upper := strings.ToUpper(user.Context.Country)
 	if user.Context.Country != "" {
-		*options.Country = strings.ToUpper(user.Context.Country)
-		return &options
+		options.Country = &upper
+		options.Limit = &limit
 	}
-	return nil
+	return &options
 }
