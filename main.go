@@ -113,14 +113,13 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 
 	for _, val := range recommendations.Tracks {
 		item := trackObject{URI: val.URI, Name: val.Name}
+		for _, artist := range val.Artists {
+			item.Name += " - " + artist.Name
+		}
 		trackObjs = append(trackObjs, item)
 	}
 
-	/* var items []Spotify.URI
-
-	for _, val := range recommendations.Tracks {
-		items = append(items, val.URI)
-	} */
+	fmt.Println(trackObjs)
 
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(trackObjs)
