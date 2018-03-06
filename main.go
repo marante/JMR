@@ -25,6 +25,11 @@ type appError struct {
 	Code    int
 }
 
+type trackObject struct {
+	URI  Spotify.URI `json:"uri"`
+	Name string      `json:"name"`
+}
+
 type appHandler func(http.ResponseWriter, *http.Request) *appError
 
 func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -42,6 +47,7 @@ func main() {
 	router.Handle("/", appHandler(Index)).Methods("GET")
 	router.Handle("/recently", appHandler(RecentlyPlayed)).Methods("POST")
 	router.Handle("/recommendations", appHandler(Recommendations)).Methods("POST")
+	router.Handle("/analysis", appHandler(TrackAnalysis)).Methods("POST")
 	log.Fatal(http.ListenAndServe(":"+port, handlers.LoggingHandler(os.Stdout, router)))
 }
 
@@ -94,9 +100,7 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 
 	seeds := utils.Seed(tracks, t.Context.ContextTracks)
 	attr := utils.AttributeSelector(&t)
-	fmt.Println(attr)
 	options := utils.OptionsSelector(&t)
-	fmt.Println(options)
 
 	// There might be occasions when this returns > 5 values, which is OK.
 	recommendations, err := Spotify.GetRecommendations(seeds, attr, options, t.Token)
@@ -105,17 +109,48 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 		return &appError{err, "Error trying to retrieve recommendations.", 400}
 	}
 
-	var uris []Spotify.URI
+	var trackObjs []trackObject
 
 	for _, val := range recommendations.Tracks {
-		uris = append(uris, val.URI)
+		item := trackObject{URI: val.URI, Name: val.Name}
+		trackObjs = append(trackObjs, item)
 	}
 
+	/* var items []Spotify.URI
+
+	for _, val := range recommendations.Tracks {
+		items = append(items, val.URI)
+	} */
+
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(uris)
+	err = json.NewEncoder(w).Encode(trackObjs)
 	if err != nil {
 		fmt.Println(err)
 		return &appError{err, "Error encoding data to JSON", 400}
+	}
+	return nil
+}
+
+func TrackAnalysis(w http.ResponseWriter, r *http.Request) *appError {
+	decoder := json.NewDecoder(r.Body)
+	var t Spotify.UserInfo
+	if err := decoder.Decode(&t); err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error trying to decode JSON body.", 400}
+	}
+	defer r.Body.Close()
+
+	if t.Context.AnalyzeTracks != nil {
+		attributes, err := Spotify.GetAudioFeatures(t.Context.AnalyzeTracks, t.Token)
+		if err != nil {
+			fmt.Println(err)
+			return &appError{err, "There was an error trying to analyze tracks.", 400}
+		}
+		err = json.NewEncoder(w).Encode(attributes)
+		if err != nil {
+			fmt.Println(err)
+			return &appError{err, "Error encoding data to JSON", 400}
+		}
 	}
 	return nil
 }

@@ -2,7 +2,11 @@ package Spotify
 
 import (
 	"fmt"
+	"strings"
 )
+
+// BaseAddress for Spotify endpoints.
+const baseAddress = "https://api.spotify.com/v1/"
 
 // URI identifies an artist, album, track, or category.  For example,
 // spotify:track:6rqhFgbbKwnb9MLmUQDhG6
@@ -44,6 +48,72 @@ type SimpleTrack struct {
 	URI         URI `json:"uri"`
 }
 
+// Trackattributes needed to hold return value from Track Analysis endpoint on Spotify.
+type AnalysisAttributes struct {
+	Danceability     float64 `json:"danceability"`
+	Energy           float64 `json:"energy"`
+	Key              int     `json:"key"`
+	Loudness         float64 `json:"loudness"`
+	Mode             int     `json:"mode"`
+	Speechiness      float64 `json:"speechiness"`
+	Acousticness     float64 `json:"acousticness"`
+	Instrumentalness float64 `json:"instrumentalness"`
+	Liveness         float64 `json:"liveness"`
+	Valence          float64 `json:"valence"`
+	Tempo            float64 `json:"tempo"`
+	Type             string  `json:"type"`
+	ID               string  `json:"id"`
+	URI              string  `json:"uri"`
+	TrackHref        string  `json:"track_href"`
+	AnalysisURL      string  `json:"analysis_url"`
+	DurationMs       int     `json:"duration_ms"`
+	TimeSignature    int     `json:"time_signature"`
+}
+
+type Mode int
+
+// Mode of music, 0 or 1, equivalent to "Dur/moll"
+const (
+	Minor Mode = iota
+	Major
+)
+
+type Key int
+
+const (
+	C Key = iota
+	CSharp
+	D
+	DSharp
+	E
+	F
+	FSharp
+	G
+	GSharp
+	A
+	ASharp
+	B
+	DFlat = CSharp
+	EFlat = DSharp
+	GFlat = FSharp
+	AFlat = GSharp
+	BFlat = ASharp
+)
+
 func (st SimpleTrack) String() string {
 	return fmt.Sprintf("TRACK<[%s] [%s]>", st.ID, st.Name)
+}
+
+func GetAudioFeatures(tracks []string, token string) ([]*AnalysisAttributes, error) {
+	url := fmt.Sprintf("%saudio-features?ids=%s", baseAddress, strings.Join(tracks, ","))
+	temp := struct {
+		F []*AnalysisAttributes `json:"audio_features"`
+	}{}
+
+	err := Get(url, token, &temp)
+	if err != nil {
+		return nil, err
+	}
+
+	return temp.F, nil
 }
