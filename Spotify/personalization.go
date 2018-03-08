@@ -180,17 +180,15 @@ func GetRecommendations(seeds Seeds, trackAttributes *TrackAttributes, opt *Opti
 	setTrackAttributesValues(trackAttributes, v)
 
 	if opt != nil {
-		if opt.Limit != nil {
-			v.Set("limit", strconv.Itoa(*opt.Limit))
+		if opt.Limit != 0 {
+			v.Set("limit", strconv.Itoa(opt.Limit))
 		}
-		if opt.Country != nil {
-			v.Set("market", *opt.Country)
+		if opt.Country != "" {
+			v.Set("market", opt.Country)
 		}
 	}
 
 	spotifyURL := baseURL + "recommendations?" + v.Encode()
-
-	fmt.Println(spotifyURL)
 
 	var recommendations Recommendations
 	err := Get(spotifyURL, token, &recommendations)

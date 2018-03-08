@@ -40,16 +40,16 @@ type Options struct {
 	// this parameter if you want the list of returned items to
 	// be relevant to a particular country.  If omitted, the
 	// results will be relevant to all countries.
-	Country *string
+	Country string
 	// Limit is the maximum number of items to return.
-	Limit *int
+	Limit int
 	// Offset is the index of the first item to return.  Use it
 	// with Limit to get the next set of items.
-	Offset *int
+	Offset int
 	// Timerange is the period of time from which to return results
 	// in certain API calls. The three options are the following string
 	// literals: "short", "medium", and "long"
-	Timerange *string
+	Timerange string
 }
 
 func toStringSlice(ids []ID) []string {

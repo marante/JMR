@@ -12,6 +12,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 var (
@@ -64,7 +65,7 @@ func RecentlyPlayed(w http.ResponseWriter, r *http.Request) *appError {
 		return &appError{err, "Error trying to decode JSON body.", 400}
 	}
 	defer r.Body.Close()
-	// Getting the 50 recently played tracks for a given user
+
 	opts := &Spotify.RecentlyPlayedOptions{Limit: 50}
 	tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, opts)
 	if err != nil {
@@ -82,25 +83,37 @@ func RecentlyPlayed(w http.ResponseWriter, r *http.Request) *appError {
 }
 
 func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
-	decoder := json.NewDecoder(r.Body)
 	var t Spotify.UserInfo
+	var attr *Spotify.TrackAttributes
+	var err error
+	var seeds Spotify.Seeds
+	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&t); err != nil {
 		fmt.Println(err)
 		return &appError{err, "Error trying to decode JSON body.", 400}
 	}
 	defer r.Body.Close()
 
-	// Getting the 50 recently played tracks for a given user
-	opts := &Spotify.RecentlyPlayedOptions{Limit: 50}
-	tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, opts)
-	if err != nil {
-		fmt.Println(err)
-		return &appError{err, "Error trying to retrieve recently played tracks.", 400}
+	if len(t.Context.AnalyzeTracks) > 0 {
+		attr, err = utils.GetTrackAttributes(&t)
+		if err != nil {
+			fmt.Println(err)
+			return &appError{err, "Error trying to retrieve results from track analysis.", 400}
+		}
+		seeds = utils.Seed(nil, t.Context.AnalyzeTracks)
+	} else {
+		recentlyPlayed := &Spotify.RecentlyPlayedOptions{Limit: 50}
+		tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, recentlyPlayed)
+		if err != nil {
+			fmt.Println(err)
+			return &appError{err, "Error trying to retrieve recently played tracks.", 400}
+		}
+		seeds = utils.Seed(tracks, nil)
 	}
 
-	seeds := utils.Seed(tracks, t.Context.ContextTracks)
-	attr := utils.AttributeSelector(&t)
-	options := utils.OptionsSelector(&t)
+	options := &Spotify.Options{
+		Country: strings.ToUpper(t.Context.Country),
+	}
 
 	// There might be occasions when this returns > 5 values, which is OK.
 	recommendations, err := Spotify.GetRecommendations(seeds, attr, options, t.Token)
