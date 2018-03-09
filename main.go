@@ -113,6 +113,7 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 
 	options := &Spotify.Options{
 		Country: strings.ToUpper(t.Context.Country),
+		Limit:   5,
 	}
 
 	// There might be occasions when this returns > 5 values, which is OK.
