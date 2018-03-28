@@ -14,6 +14,6 @@ type PlayerLog struct {
 		Still     int `json:"still,omitempty" bson:"still,omitempty"`
 		Unknown   int `json:"unknown,omitempty" bson:"unknown,omitempty"`
 	} `json:"activityCount"`
-	SkipCount   int    `json:"skipCount,omitempty" bson:"skipCount,omitempty"`
-	ElapsedTime string `json:"elapsedTime,omitempty" bson:"elapsedTime,omitempty"`
+	SkipCount   int `json:"skipCount,omitempty" bson:"skipCount,omitempty"`
+	ElapsedTime int `json:"elapsedTime,omitempty" bson:"elapsedTime,omitempty"`
 }

@@ -44,7 +44,6 @@ func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Parse the configuration file 'config.toml', and establish a connection to DB
 func init() {
 	// Checks to use the correct env variable (Heroku vs Localhost).
 	server := os.Getenv("SERVER")
@@ -65,11 +64,6 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
-
-	fmt.Println(port)
-	fmt.Println(dao.Server)
-	fmt.Println(dao.Database)
-
 	var router = mux.NewRouter()
 	router.Handle("/", appHandler(Index)).Methods("GET")
 	router.Handle("/recently", appHandler(RecentlyPlayed)).Methods("POST")
