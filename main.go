@@ -7,8 +7,12 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/marante/JMR/Spotify"
+	. "github.com/marante/JMR/dao"
+	. "github.com/marante/JMR/models"
 	"github.com/marante/JMR/utils"
 	_ "github.com/zmb3/spotify"
+	_ "gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"log"
 	"net/http"
 	"os"
@@ -17,6 +21,7 @@ import (
 
 var (
 	store *sessions.CookieStore
+	dao   = LogsDAO{}
 )
 
 // Below code simplifies and makes error handling for handlers more concrete.
@@ -39,16 +44,44 @@ func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Parse the configuration file 'config.toml', and establish a connection to DB
+func init() {
+	// Checks to use the correct env variable (Heroku vs Localhost).
+	server := os.Getenv("SERVER")
+	if server == "" {
+		server = os.Getenv("SERVER_LOCAL")
+	}
+	database := os.Getenv("DATABASE")
+	if server == "" {
+		database = os.Getenv("DATABASE_LOCAL")
+	}
+	dao.Server = server
+	dao.Database = database
+	dao.Connect()
+}
+
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
+
+	fmt.Println(port)
+	fmt.Println(dao.Server)
+	fmt.Println(dao.Database)
+
 	var router = mux.NewRouter()
 	router.Handle("/", appHandler(Index)).Methods("GET")
 	router.Handle("/recently", appHandler(RecentlyPlayed)).Methods("POST")
 	router.Handle("/recommendations", appHandler(Recommendations)).Methods("POST")
 	router.Handle("/analysis", appHandler(TrackAnalysis)).Methods("POST")
+
+	// Routes for handling logging.
+	router.Handle("/logs", appHandler(FindAllLogs)).Methods("GET")
+	router.Handle("/logs/{id}", appHandler(FindLogById)).Methods("GET")
+	router.Handle("/logs", appHandler(CreateLog)).Methods("POST")
+	router.Handle("/logs", appHandler(UpdateLog)).Methods("PUT")
+	router.Handle("/logs", appHandler(DeleteLog)).Methods("DELETE")
 	log.Fatal(http.ListenAndServe(":"+port, handlers.LoggingHandler(os.Stdout, router)))
 }
 
@@ -162,6 +195,79 @@ func TrackAnalysis(w http.ResponseWriter, r *http.Request) *appError {
 			fmt.Println(err)
 			return &appError{err, "Error encoding data to JSON", 400}
 		}
+	}
+	return nil
+}
+
+func CreateLog(w http.ResponseWriter, r *http.Request) *appError {
+	defer r.Body.Close()
+	var log PlayerLog
+	if err := json.NewDecoder(r.Body).Decode(&log); err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error trying to decode JSON body.", http.StatusBadRequest}
+	}
+	log.ID = bson.NewObjectId()
+	if log.UserID == "" {
+		return &appError{nil, "Cannot add log without userid.", http.StatusBadRequest}
+	}
+	if err := dao.Insert(log); err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error trying to insert logentry into DB", http.StatusBadRequest}
+	}
+	return nil
+}
+
+func FindLogById(w http.ResponseWriter, r *http.Request) *appError {
+	params := mux.Vars(r)
+	log, err := dao.FindById(params["id"])
+	if err != nil {
+		fmt.Println(err)
+		return &appError{err, "Could not find document with specified id.", http.StatusNoContent}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(log)
+	return nil
+}
+
+func FindAllLogs(w http.ResponseWriter, r *http.Request) *appError {
+	logs, err := dao.FindAll()
+	if len(logs) == 0 {
+		return &appError{nil, "No documents in DB", http.StatusNoContent}
+	}
+	if err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error trying to fetch all records from repo", http.StatusBadRequest}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Println(logs)
+	err = json.NewEncoder(w).Encode(logs)
+	return nil
+}
+
+func UpdateLog(w http.ResponseWriter, r *http.Request) *appError {
+	defer r.Body.Close()
+	var log PlayerLog
+	if err := json.NewDecoder(r.Body).Decode(&log); err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error when trying to decode body from request.", http.StatusBadRequest}
+	}
+	if err := dao.Update(log); err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error when trying to update record associated with given id.", http.StatusBadRequest}
+	}
+	return nil
+}
+
+func DeleteLog(w http.ResponseWriter, r *http.Request) *appError {
+	defer r.Body.Close()
+	var log PlayerLog
+	if err := json.NewDecoder(r.Body).Decode(&log); err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error when trying to decode body from request.", http.StatusBadRequest}
+	}
+	if err := dao.Delete(log); err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error when trying to update record associated with given id.", http.StatusBadRequest}
 	}
 	return nil
 }
