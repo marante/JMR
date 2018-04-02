@@ -124,16 +124,24 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 	if len(t.Context.AnalyzeTracks) > 0 {
 		attr, err = utils.GetTrackAttributes(&t)
 		if err != nil {
+			if err.Error() == "Only valid bearer authentication supported" {
+				fmt.Println(err)
+				return &appError{err, err.Error(), 401}
+			}
 			fmt.Println(err)
-			return &appError{err, "Error trying to retrieve results from track analysis.", 400}
+			return &appError{err, err.Error(), 400}
 		}
 		seeds = utils.Seed(nil, t.Context.AnalyzeTracks)
 	} else {
 		recentlyPlayed := &Spotify.RecentlyPlayedOptions{Limit: 50}
 		tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, recentlyPlayed)
 		if err != nil {
+			if err.Error() == "Only valid bearer authentication supported" {
+				fmt.Println(err)
+				return &appError{err, err.Error(), 401}
+			}
 			fmt.Println(err)
-			return &appError{err, "Error trying to retrieve recently played tracks.", 400}
+			return &appError{err, err.Error(), 400}
 		}
 		seeds = utils.Seed(tracks, nil)
 	}
