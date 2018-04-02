@@ -124,7 +124,7 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 	if len(t.Context.AnalyzeTracks) > 0 {
 		attr, err = utils.GetTrackAttributes(&t)
 		if err != nil {
-			if err.Error() == "Only valid bearer authentication supported" {
+			if err.Error() == "Only valid bearer authentication supported" || err.Error() == "The access token expired" {
 				fmt.Println(err)
 				return &appError{err, err.Error(), 401}
 			}
@@ -136,7 +136,7 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 		recentlyPlayed := &Spotify.RecentlyPlayedOptions{Limit: 50}
 		tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, recentlyPlayed)
 		if err != nil {
-			if err.Error() == "Only valid bearer authentication supported" {
+			if err.Error() == "Only valid bearer authentication supported" || err.Error() == "The access token expired" {
 				fmt.Println(err)
 				return &appError{err, err.Error(), 401}
 			}
