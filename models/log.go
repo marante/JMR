@@ -13,25 +13,25 @@ type PlayerLog struct {
 	UserID     string        `json:"userId" bson:"userId"`
 	Activities struct {
 		InVehicle struct {
-			ActivityData `json:"activityData,omitempty" bson:"activityData,omitempty"`
+			ActivityData `json:"ActivityData,omitempty" bson:"ActivityData,omitempty"`
 		} `json:"in_vehicle,omitempty" bson:"in_vehicle,omitempty"`
 		InBicycle struct {
-			ActivityData `json:"activityData,omitempty" bson:"activityData,omitempty"`
+			ActivityData `json:"ActivityData,omitempty" bson:"ActivityData,omitempty"`
 		} `json:"on_bicycle,omitempty" bson:"bicycle,omitempty"`
 		OnFoot struct {
-			ActivityData `json:"activityData,omitempty" bson:"activityData,omitempty"`
+			ActivityData `json:"ActivityData,omitempty" bson:"ActivityData,omitempty"`
 		} `json:"on_foot,omitempty" bson:"on_foot,omitempty"`
 		Walking struct {
-			ActivityData `json:"activityData,omitempty" bson:"activityData,omitempty"`
+			ActivityData `json:"ActivityData,omitempty" bson:"ActivityData,omitempty"`
 		} `json:"walking,omitempty" bson:"walking,omitempty"`
 		Running struct {
-			ActivityData `json:"activityData,omitempty" bson:"activityData,omitempty"`
+			ActivityData `json:"ActivityData,omitempty" bson:"ActivityData,omitempty"`
 		} `json:"running,omitempty" bson:"running,omitempty"`
 		Still struct {
-			ActivityData `json:"activityData,omitempty" bson:"activityData,omitempty"`
+			ActivityData `json:"ActivityData,omitempty" bson:"ActivityData,omitempty"`
 		} `json:"still,omitempty" bson:"still,omitempty"`
 		Unknown struct {
-			ActivityData `json:"activityData,omitempty" bson:"activityData,omitempty"`
+			ActivityData `json:"ActivityData,omitempty" bson:"ActivityData,omitempty"`
 		} `json:"unknown,omitempty" bson:"unknown,omitempty"`
 	} `json:"activities"`
 	TotalSkipCount int    `json:"totalSkipCount,omitempty" bson:"totalSkipCount,omitempty"`
