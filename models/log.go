@@ -2,12 +2,6 @@ package models
 
 import "gopkg.in/mgo.v2/bson"
 
-/* type ActivityData struct {
-	PlayedTracks  []string `json:"playedTracks,omitempty" bson:"playedTracks,omitempty"`
-	ActivityCount int      `json:"activityCount,omitempty" bson:"activityCount,omitempty"`
-	SkipCount     int      `json:"skipCount,omitempty" bson:"skipCount,omitempty"`
-} */
-
 type PlayerLog struct {
 	ID         bson.ObjectId `json:"_id,omitempty"bson:"_id,omitempty"`
 	UserID     string        `json:"userId" bson:"userId"`
@@ -47,7 +41,7 @@ type PlayerLog struct {
 			ActivityCount int      `json:"activityCount,omitempty" bson:"activityCount,omitempty"`
 			SkipCount     int      `json:"skipCount,omitempty" bson:"skipCount,omitempty"`
 		} `json:"unknown,omitempty" bson:"unknown,omitempty"`
-	} `json:"activities"`
+	} `json:"activities,omitempty" bson:"activities,omitempty"`
 	TotalSkipCount int    `json:"totalSkipCount,omitempty" bson:"totalSkipCount,omitempty"`
 	TimeOfDay      string `json:"timeOfDay,omitempty" bson:"timeOfDay,omitempty"`
 	ElapsedTime    int    `json:"elapsedTime,omitempty" bson:"elapsedTime,omitempty"`
