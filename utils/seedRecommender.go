@@ -4,17 +4,12 @@ import (
 	"github.com/marante/JMR/Spotify"
 )
 
-var (
-	songs   []string
-	artists []string
-)
-
 // Seed returns a spotify.Seed object containing exactly 5 or less items.
 // These will be used for the seed
 func Seed(tracks []Spotify.RecentlyPlayedItem, contextTrackIds []string) Spotify.Seeds {
 	// artists & songs
-	songs = nil
-	artists = nil
+	var songs []string
+	var artists []string
 	songs = append(songs, contextTrackIds...)
 	for _, items := range tracks {
 		songs = append(songs, items.Track.ID.String())
