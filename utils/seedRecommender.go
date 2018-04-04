@@ -13,6 +13,8 @@ var (
 // These will be used for the seed
 func Seed(tracks []Spotify.RecentlyPlayedItem, contextTrackIds []string) Spotify.Seeds {
 	// artists & songs
+	songs = nil
+	artists = nil
 	songs = append(songs, contextTrackIds...)
 	for _, items := range tracks {
 		songs = append(songs, items.Track.ID.String())

@@ -145,7 +145,6 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 		}
 		seeds = utils.Seed(tracks, nil)
 	}
-
 	options := &Spotify.Options{
 		Country: strings.ToUpper(t.Context.Country),
 		Limit:   20,
