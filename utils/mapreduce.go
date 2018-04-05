@@ -89,12 +89,19 @@ func MapReduceRandom(token string, playlists []Spotify.SimplePlaylist) []TrackOb
 		}
 		playlistTracks = append(playlistTracks, trackPage)
 	}
+	var artistsNames string
 	for _, val := range playlistTracks {
 		for _, value := range val.Tracks {
+			artistsNames = ""
 			for _, artists := range value.Track.Artists {
-				trackObj := TrackObject{URI: value.Track.URI, Name: value.Track.Name + " - " + artists.Name}
-				tracks = append(tracks, trackObj)
+				if artistsNames == "" {
+					artistsNames = artists.Name
+				} else {
+					artistsNames += " - " + artists.Name
+				}
 			}
+			trackObj := TrackObject{URI: value.Track.URI, Name: value.Track.Name + " - " + artistsNames}
+			tracks = append(tracks, trackObj)
 		}
 	}
 	return tracks
