@@ -3,8 +3,16 @@ package utils
 import (
 	"fmt"
 	"github.com/marante/JMR/Spotify"
+	"math/rand"
 	"sort"
+	"time"
 )
+
+// TrackObject is an aggregate of a spotify URI and name of track.
+type TrackObject struct {
+	URI  Spotify.URI `json:"uri"`
+	Name string      `json:"name"`
+}
 
 // Pair represents a custom map
 type Pair struct {
@@ -69,4 +77,50 @@ func Comparator(ss ...[]Pair) Spotify.Seeds {
 	}
 
 	return seeds
+}
+
+func MapReduceRandom(token string, playlists []Spotify.SimplePlaylist) []TrackObject {
+	var playlistTracks []*Spotify.PlaylistTrackPage
+	var tracks []TrackObject
+	for _, v := range playlists {
+		trackPage, err := Spotify.GetPlaylistTracksOpt(token, "spotify", v.ID, nil, "")
+		if err != nil {
+			fmt.Println(err)
+		}
+		playlistTracks = append(playlistTracks, trackPage)
+	}
+	for _, val := range playlistTracks {
+		for _, value := range val.Tracks {
+			for _, artists := range value.Track.Artists {
+				trackObj := TrackObject{URI: value.Track.URI, Name: value.Track.Name + " - " + artists.Name}
+				tracks = append(tracks, trackObj)
+			}
+		}
+	}
+	return tracks
+}
+
+func Randomizer(tracks []TrackObject) []TrackObject {
+	if len(tracks) == 0 {
+		return nil
+	}
+	var uris []TrackObject
+	rand.Seed(time.Now().Unix()) // initialize global pseudo random generator
+	for len(uris) < 20 {
+		uri := tracks[rand.Intn(len(tracks))]
+		if contains(uris, uri) {
+			continue
+		}
+		uris = append(uris, uri)
+	}
+	return uris
+}
+
+func contains(s []TrackObject, e TrackObject) bool {
+	for _, a := range s {
+		if a.URI == e.URI {
+			return true
+		}
+	}
+	return false
 }

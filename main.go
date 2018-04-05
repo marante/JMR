@@ -31,11 +31,6 @@ type appError struct {
 	Code    int
 }
 
-type trackObject struct {
-	URI  Spotify.URI `json:"uri"`
-	Name string      `json:"name"`
-}
-
 type appHandler func(http.ResponseWriter, *http.Request) *appError
 
 func (ah appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -67,6 +62,7 @@ func main() {
 	var router = mux.NewRouter()
 	router.Handle("/", appHandler(Index)).Methods("GET")
 	router.Handle("/recently", appHandler(RecentlyPlayed)).Methods("POST")
+	router.Handle("/random", appHandler(Random)).Methods("POST")
 	router.Handle("/recommendations", appHandler(Recommendations)).Methods("POST")
 	router.Handle("/analysis", appHandler(TrackAnalysis)).Methods("POST")
 
@@ -107,6 +103,39 @@ func RecentlyPlayed(w http.ResponseWriter, r *http.Request) *appError {
 		return &appError{err, "Error encoding data to JSON", 400}
 	}
 	return nil
+}
+
+func Random(w http.ResponseWriter, r *http.Request) *appError {
+	decoder := json.NewDecoder(r.Body)
+	var t Spotify.UserInfo
+	if err := decoder.Decode(&t); err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error trying to decode JSON body.", 400}
+	}
+	defer r.Body.Close()
+
+	opts := &Spotify.PlaylistOptions{
+		Options: Spotify.Options{
+			Limit: 10,
+		},
+	}
+
+	_, lists, err := Spotify.FeaturedPlaylistsOpt(t.Token, opts)
+	if err != nil {
+		fmt.Println(err)
+		return &appError{err, "Unable to retrieve featured playlists", 400}
+	}
+
+	tracks := utils.Randomizer(utils.MapReduceRandom(t.Token, lists.Playlists))
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(tracks)
+	if err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error encoding data to JSON", 400}
+	}
+	return nil
+
 }
 
 func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
@@ -157,10 +186,10 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 		return &appError{err, "Error trying to retrieve recommendations.", 400}
 	}
 
-	var trackObjs []trackObject
+	var trackObjs []utils.TrackObject
 
 	for _, val := range recommendations.Tracks {
-		item := trackObject{URI: val.URI, Name: val.Name}
+		item := utils.TrackObject{URI: val.URI, Name: val.Name}
 		for _, artist := range val.Artists {
 			item.Name += " - " + artist.Name
 		}
