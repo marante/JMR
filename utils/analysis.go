@@ -5,12 +5,9 @@ import (
 	"math"
 )
 
-var (
-	tempDance, tempEnergy, tempSpeech, tempLoud, tempAcou, tempInstru, tempLive, tempVal, tempTempo [2]float64
-)
-
-func GetTrackAttributes(user *Spotify.UserInfo) (*Spotify.TrackAttributes, error) {
-	attr, err := Spotify.GetAudioFeatures(user.UriTracks, user.Token)
+func GetTrackAttributes(tracks []string, token string) (*Spotify.TrackAttributes, error) {
+	var tempDance, tempEnergy, tempSpeech, tempLoud, tempAcou, tempInstru, tempLive, tempVal, tempTempo [2]float64
+	attr, err := Spotify.GetAudioFeatures(tracks, token)
 	if err != nil {
 		return nil, err
 	}

@@ -142,6 +142,7 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 	var attr *Spotify.TrackAttributes
 	var err error
 	var seeds Spotify.Seeds
+	var tracks []string
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&t); err != nil {
 		fmt.Println(err)
@@ -150,7 +151,13 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 	defer r.Body.Close()
 
 	if len(t.UriTracks) > 0 {
-		attr, err = utils.GetTrackAttributes(&t)
+		for _, val := range t.UriTracks {
+			runes := []rune(val)
+			subString := runes[14:]
+			fmt.Println(string(subString))
+			tracks = append(tracks, string(subString))
+		}
+		attr, err = utils.GetTrackAttributes(tracks, t.Token)
 		if err != nil {
 			if err.Error() == "Only valid bearer authentication supported" || err.Error() == "The access token expired" {
 				fmt.Println(err)
@@ -160,7 +167,7 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 			return &appError{err, err.Error(), 400}
 		}
 		fmt.Println("With analysis of tracks")
-		seeds = utils.Seed(nil, t.UriTracks)
+		seeds = utils.Seed(nil, tracks)
 	} else {
 		recentlyPlayed := &Spotify.RecentlyPlayedOptions{Limit: 50}
 		tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, recentlyPlayed)
@@ -177,8 +184,6 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 	options := &Spotify.Options{
 		Limit: 20,
 	}
-
-	fmt.Println(seeds)
 
 	// There might be occasions when this returns > 5 values, which is OK.
 	recommendations, err := Spotify.GetRecommendations(seeds, attr, options, t.Token)
