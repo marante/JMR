@@ -10,7 +10,7 @@ var (
 )
 
 func GetTrackAttributes(user *Spotify.UserInfo) (*Spotify.TrackAttributes, error) {
-	attr, err := Spotify.GetAudioFeatures(user.Context.AnalyzeTracks, user.Token)
+	attr, err := Spotify.GetAudioFeatures(user.UriTracks, user.Token)
 	if err != nil {
 		return nil, err
 	}
@@ -58,5 +58,7 @@ func GetTrackAttributes(user *Spotify.UserInfo) (*Spotify.TrackAttributes, error
 		MinValence(tempVal[0]).
 		MaxValence(tempVal[1]).
 		MinTempo(tempTempo[0]).
-		MaxTempo(tempTempo[1]), nil
+		MaxTempo(tempTempo[1]).
+		MinPopularity(30).
+		MaxPopularity(70), nil
 }

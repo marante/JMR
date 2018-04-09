@@ -16,7 +16,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"strings"
 )
 
 var (
@@ -150,7 +149,7 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 	}
 	defer r.Body.Close()
 
-	if len(t.Context.AnalyzeTracks) > 0 {
+	if len(t.UriTracks) > 0 {
 		attr, err = utils.GetTrackAttributes(&t)
 		if err != nil {
 			if err.Error() == "Only valid bearer authentication supported" || err.Error() == "The access token expired" {
@@ -160,7 +159,8 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 			fmt.Println(err)
 			return &appError{err, err.Error(), 400}
 		}
-		seeds = utils.Seed(nil, t.Context.AnalyzeTracks)
+		fmt.Println("With analysis of tracks")
+		seeds = utils.Seed(nil, t.UriTracks)
 	} else {
 		recentlyPlayed := &Spotify.RecentlyPlayedOptions{Limit: 50}
 		tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, recentlyPlayed)
@@ -175,9 +175,10 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 		seeds = utils.Seed(tracks, nil)
 	}
 	options := &Spotify.Options{
-		Country: strings.ToUpper(t.Context.Country),
-		Limit:   20,
+		Limit: 20,
 	}
+
+	fmt.Println(seeds)
 
 	// There might be occasions when this returns > 5 values, which is OK.
 	recommendations, err := Spotify.GetRecommendations(seeds, attr, options, t.Token)
@@ -187,7 +188,6 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 	}
 
 	var trackObjs []utils.TrackObject
-
 	for _, val := range recommendations.Tracks {
 		item := utils.TrackObject{URI: val.URI, Name: val.Name}
 		for _, artist := range val.Artists {
@@ -214,8 +214,8 @@ func TrackAnalysis(w http.ResponseWriter, r *http.Request) *appError {
 	}
 	defer r.Body.Close()
 
-	if t.Context.AnalyzeTracks != nil {
-		attributes, err := Spotify.GetAudioFeatures(t.Context.AnalyzeTracks, t.Token)
+	if t.UriTracks != nil {
+		attributes, err := Spotify.GetAudioFeatures(t.UriTracks, t.Token)
 		if err != nil {
 			fmt.Println(err)
 			return &appError{err, "There was an error trying to analyze tracks.", 400}

@@ -7,7 +7,6 @@ import (
 // Seed returns a spotify.Seed object containing exactly 5 or less items.
 // These will be used for the seed
 func Seed(tracks []Spotify.RecentlyPlayedItem, contextTrackIds []string) Spotify.Seeds {
-	// artists & songs
 	var songs []string
 	var artists []string
 	songs = append(songs, contextTrackIds...)

@@ -111,6 +111,7 @@ func GetAudioFeatures(tracks []string, token string) ([]*AnalysisAttributes, err
 	}{}
 
 	err := Get(url, token, &temp)
+	fmt.Println(temp.F)
 	if err != nil {
 		return nil, err
 	}
