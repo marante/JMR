@@ -210,6 +210,7 @@ func GetRecommendations(seeds Seeds, trackAttributes *TrackAttributes, opt *Opti
 	}
 
 	spotifyURL := baseURL + "recommendations?" + v.Encode()
+	fmt.Println(spotifyURL)
 
 	var recommendations Recommendations
 	err := Get(spotifyURL, token, &recommendations)

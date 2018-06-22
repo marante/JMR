@@ -83,9 +83,7 @@ func Index(w http.ResponseWriter, r *http.Request) *appError {
 
 func RecommendationsGenre(w http.ResponseWriter, r *http.Request) *appError {
 	var t Spotify.UserInfo
-	var attr *Spotify.TrackAttributes
 	var err error
-	var tracks []string
 	var seeds Spotify.Seeds
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&t); err != nil {
@@ -95,21 +93,12 @@ func RecommendationsGenre(w http.ResponseWriter, r *http.Request) *appError {
 	defer r.Body.Close()
 
 	seeds = utils.SeedGenre(t.Genre)
-	attr, err = utils.GetTrackAttributes(tracks, t.Token)
-	if err != nil {
-		if err.Error() == "Only valid bearer authentication supported" || err.Error() == "The access token expired" {
-			fmt.Println(err)
-			return &appError{err, err.Error(), 401}
-		}
-		fmt.Println(err)
-		return &appError{err, err.Error(), 400}
-	}
 
 	options := &Spotify.Options{
 		Limit: 20,
 	}
 
-	recommendations, err := Spotify.GetRecommendations(seeds, attr, options, t.Token)
+	recommendations, err := Spotify.GetRecommendations(seeds, nil, options, t.Token)
 	if err != nil {
 		fmt.Println(err)
 		return &appError{err, "Error trying to retrieve recommendations.", 400}
@@ -174,8 +163,17 @@ func RecommendationsHistory(w http.ResponseWriter, r *http.Request) *appError {
 		return &appError{err, "Error trying to retrieve recommendations.", 400}
 	}
 
+	var trackObjs []utils.TrackObject
+	for _, val := range recommendations.Tracks {
+		item := utils.TrackObject{URI: val.URI, Name: val.Name}
+		for _, artist := range val.Artists {
+			item.Name += " - " + artist.Name
+		}
+		trackObjs = append(trackObjs, item)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(recommendations)
+	err = json.NewEncoder(w).Encode(trackObjs)
 	if err != nil {
 		fmt.Println(err)
 		return &appError{err, "Error encoding data to JSON", 400}

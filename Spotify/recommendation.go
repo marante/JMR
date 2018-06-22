@@ -1,6 +1,7 @@
 package Spotify
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -74,6 +75,8 @@ func setSeedValues(seeds Seeds, v url.Values) {
 	if seeds.Genre != "" {
 		v.Set("seed_genres", seeds.Genre)
 	}
+
+	fmt.Println(v)
 }
 
 // setTrackAttributesValues sets track attributes values to the given url values

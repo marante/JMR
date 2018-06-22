@@ -17,7 +17,7 @@ func SeedTrack(token string, tracks []string) Spotify.Seeds {
 	for _, item := range fullTracks {
 		songs = append(songs, string(item.ID))
 		for _, trackArtists := range item.Artists {
-			artists = append(artists, trackArtists.Name)
+			artists = append(artists, string(trackArtists.ID))
 		}
 	}
 
