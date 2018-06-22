@@ -2,10 +2,11 @@ package utils
 
 import (
 	"fmt"
-	"github.com/marante/JMR/Spotify"
 	"math/rand"
 	"sort"
 	"time"
+
+	"github.com/marante/JMR/Spotify"
 )
 
 // TrackObject is an aggregate of a spotify URI and name of track.

@@ -1,12 +1,14 @@
 package dao
 
 import (
+	"log"
+
 	. "github.com/marante/JMR/models"
 	mgo "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"log"
 )
 
+// LogsDAO represents a struct capable of connecting to the DB and correct server
 type LogsDAO struct {
 	Server   string
 	Database string
@@ -15,7 +17,7 @@ type LogsDAO struct {
 var db *mgo.Database
 
 const (
-	COLLECTION = "logs"
+	collection = "logs"
 )
 
 // Connect attempts to connect to the DB with the given credentials from the .toml config file.
@@ -31,31 +33,31 @@ func (l *LogsDAO) Connect() {
 // FindAll finds all retrieves all documents from the DB.
 func (l *LogsDAO) FindAll() ([]PlayerLog, error) {
 	var logs []PlayerLog
-	err := db.C(COLLECTION).Find(bson.M{}).All(&logs)
+	err := db.C(collection).Find(bson.M{}).All(&logs)
 	return logs, err
 }
 
-// FindById finds document based on ID
-func (l *LogsDAO) FindById(id string) (PlayerLog, error) {
+// FindByID finds document based on ID
+func (l *LogsDAO) FindByID(id string) (PlayerLog, error) {
 	var log PlayerLog
-	err := db.C(COLLECTION).Find(bson.M{"userId": id}).One(&log)
+	err := db.C(collection).Find(bson.M{"userId": id}).One(&log)
 	return log, err
 }
 
 // Insert inserts a document into the DB
 func (l *LogsDAO) Insert(log PlayerLog) error {
-	err := db.C(COLLECTION).Insert(&log)
+	err := db.C(collection).Insert(&log)
 	return err
 }
 
 // Delete delete a specifc logentry from the DB
 func (l *LogsDAO) Delete(log PlayerLog) error {
-	err := db.C(COLLECTION).Remove(bson.M{"userId": log.UserID})
+	err := db.C(collection).Remove(bson.M{"userId": log.UserID})
 	return err
 }
 
 // Update updates/replaces a logentry in the DB
 func (l *LogsDAO) Update(log PlayerLog) error {
-	err := db.C(COLLECTION).Update(bson.M{"userId": log.UserID}, &log)
+	err := db.C(collection).Update(bson.M{"userId": log.UserID}, &log)
 	return err
 }

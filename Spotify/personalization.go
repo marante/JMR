@@ -3,11 +3,13 @@ package Spotify
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -164,6 +166,25 @@ func GetRecentlyPlayedTracksOpt(token string, opt *RecentlyPlayedOptions) ([]Rec
 		return nil, err
 	}
 	return result.Items, nil
+}
+
+// GetTracks blabla
+func GetTracks(token string, ids []string) ([]*FullTrack, error) {
+	if len(ids) > 50 {
+		return nil, errors.New("spotify: FindTracks supports up to 50 tracks")
+	}
+	spotifyURL := baseAddress + "tracks?ids=" + strings.Join(ids, ",")
+
+	var t struct {
+		Tracks []*FullTrack `jsosn:"tracks"`
+	}
+
+	err := Get(spotifyURL, token, &t)
+	if err != nil {
+		return nil, err
+	}
+
+	return t.Tracks, nil
 }
 
 func GetRecommendations(seeds Seeds, trackAttributes *TrackAttributes, opt *Options, token string) (*Recommendations, error) {

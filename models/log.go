@@ -2,8 +2,9 @@ package models
 
 import "gopkg.in/mgo.v2/bson"
 
+// PlayerLog represents log information that is saved in DocumentDB.
 type PlayerLog struct {
-	ID         bson.ObjectId `json:"_id,omitempty"bson:"_id,omitempty"`
+	ID         bson.ObjectId `json:"_id,omitempty" bson:"_id,omitempty"`
 	UserID     string        `json:"userId" bson:"userId"`
 	Activities struct {
 		InVehicle struct {
@@ -45,5 +46,4 @@ type PlayerLog struct {
 	TotalSkipCount int    `json:"totalSkipCount,omitempty" bson:"totalSkipCount,omitempty"`
 	TimeOfDay      string `json:"timeOfDay,omitempty" bson:"timeOfDay,omitempty"`
 	ElapsedTime    int    `json:"elapsedTime,omitempty" bson:"elapsedTime,omitempty"`
-	//Tracks         []string `json:"tracks,omitempty" bson:"tracks,omitempty"`
 }

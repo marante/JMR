@@ -1,19 +1,23 @@
 package utils
 
 import (
+	"fmt"
+
 	"github.com/marante/JMR/Spotify"
 )
 
-// Seed returns a spotify.Seed object containing exactly 5 or less items.
-// These will be used for the seed
-func Seed(tracks []Spotify.RecentlyPlayedItem, contextTrackIds []string) Spotify.Seeds {
+// SeedTrack returns a spotify.Seed object containing exactly 5 or less items.
+func SeedTrack(token string, tracks []string) Spotify.Seeds {
 	var songs []string
 	var artists []string
-	songs = append(songs, contextTrackIds...)
-	for _, items := range tracks {
-		songs = append(songs, items.Track.ID.String())
-		for _, item := range items.Track.Artists {
-			artists = append(artists, item.ID.String())
+	fullTracks, err := Spotify.GetTracks(token, tracks)
+	if err != nil {
+		fmt.Println(err)
+	}
+	for _, item := range fullTracks {
+		songs = append(songs, string(item.ID))
+		for _, trackArtists := range item.Artists {
+			artists = append(artists, trackArtists.Name)
 		}
 	}
 
@@ -28,5 +32,13 @@ func Seed(tracks []Spotify.RecentlyPlayedItem, contextTrackIds []string) Spotify
 
 	// Compare entries, and see which has the highest hitrate.
 	seeds := Comparator(songOrder, artistOrder)
+	return seeds
+}
+
+// SeedGenre returns a spotify.Seeds object with a genre for recommendations.
+func SeedGenre(genre string) Spotify.Seeds {
+	seeds := Spotify.Seeds{
+		Genre: genre,
+	}
 	return seeds
 }

@@ -9,12 +9,15 @@ import (
 type Seeds struct {
 	Artists []ID
 	Tracks  []ID
-	Genres  []string
+	Genre   string
 }
 
 // count returns the total number of seeds contained in s
 func (s Seeds) count() int {
-	return len(s.Artists) + len(s.Tracks) + len(s.Genres)
+	if s.Genre != "" {
+		return len(s.Artists) + len(s.Tracks) + 1
+	}
+	return len(s.Artists) + len(s.Tracks)
 }
 
 // Recommendations contains a list of recommended tracks based on seeds
@@ -68,8 +71,8 @@ func setSeedValues(seeds Seeds, v url.Values) {
 	if len(seeds.Tracks) != 0 {
 		v.Set("seed_tracks", strings.Join(toStringSlice(seeds.Tracks), ","))
 	}
-	if len(seeds.Genres) != 0 {
-		v.Set("seed_genres", strings.Join(seeds.Genres, ","))
+	if seeds.Genre != "" {
+		v.Set("seed_genres", seeds.Genre)
 	}
 }
 

@@ -3,6 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
+
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -13,9 +17,6 @@ import (
 	_ "github.com/zmb3/spotify"
 	_ "gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"log"
-	"net/http"
-	"os"
 )
 
 var (
@@ -45,9 +46,11 @@ func init() {
 		server = os.Getenv("SERVER_LOCAL")
 	}
 	database := os.Getenv("DATABASE")
-	if server == "" {
+	if database == "" {
 		database = os.Getenv("DATABASE_LOCAL")
 	}
+	fmt.Println(server)
+	fmt.Println(database)
 	dao.Server = server
 	dao.Database = database
 	dao.Connect()
@@ -60,9 +63,8 @@ func main() {
 	}
 	var router = mux.NewRouter()
 	router.Handle("/", appHandler(Index)).Methods("GET")
-	router.Handle("/recently", appHandler(RecentlyPlayed)).Methods("POST")
-	router.Handle("/random", appHandler(Random)).Methods("POST")
-	router.Handle("/recommendations", appHandler(Recommendations)).Methods("POST")
+	router.Handle("/recommendations/genre", appHandler(RecommendationsGenre)).Methods("POST")
+	router.Handle("/recommendations/history", appHandler(RecommendationsHistory)).Methods("POST")
 	router.Handle("/analysis", appHandler(TrackAnalysis)).Methods("POST")
 
 	// Routes for handling logging.
@@ -79,70 +81,12 @@ func Index(w http.ResponseWriter, r *http.Request) *appError {
 	return nil
 }
 
-func RecentlyPlayed(w http.ResponseWriter, r *http.Request) *appError {
-	decoder := json.NewDecoder(r.Body)
-	var t Spotify.UserInfo
-	if err := decoder.Decode(&t); err != nil {
-		fmt.Println(err)
-		return &appError{err, "Error trying to decode JSON body.", 400}
-	}
-	defer r.Body.Close()
-
-	opts := &Spotify.RecentlyPlayedOptions{Limit: 50}
-	tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, opts)
-	if err != nil {
-		fmt.Println(err)
-		return &appError{err, "Error trying to decode JSON body.", 400}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(tracks)
-	if err != nil {
-		fmt.Println(err)
-		return &appError{err, "Error encoding data to JSON", 400}
-	}
-	return nil
-}
-
-func Random(w http.ResponseWriter, r *http.Request) *appError {
-	decoder := json.NewDecoder(r.Body)
-	var t Spotify.UserInfo
-	if err := decoder.Decode(&t); err != nil {
-		fmt.Println(err)
-		return &appError{err, "Error trying to decode JSON body.", 400}
-	}
-	defer r.Body.Close()
-
-	opts := &Spotify.PlaylistOptions{
-		Options: Spotify.Options{
-			Limit: 10,
-		},
-	}
-
-	_, lists, err := Spotify.FeaturedPlaylistsOpt(t.Token, opts)
-	if err != nil {
-		fmt.Println(err)
-		return &appError{err, "Unable to retrieve featured playlists", 400}
-	}
-
-	tracks := utils.Randomizer(utils.MapReduceRandom(t.Token, lists.Playlists))
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(tracks)
-	if err != nil {
-		fmt.Println(err)
-		return &appError{err, "Error encoding data to JSON", 400}
-	}
-	return nil
-
-}
-
-func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
+func RecommendationsGenre(w http.ResponseWriter, r *http.Request) *appError {
 	var t Spotify.UserInfo
 	var attr *Spotify.TrackAttributes
 	var err error
-	var seeds Spotify.Seeds
 	var tracks []string
+	var seeds Spotify.Seeds
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&t); err != nil {
 		fmt.Println(err)
@@ -150,42 +94,21 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 	}
 	defer r.Body.Close()
 
-	if len(t.UriTracks) > 0 {
-		for _, val := range t.UriTracks {
-			runes := []rune(val)
-			subString := runes[14:]
-			fmt.Println(string(subString))
-			tracks = append(tracks, string(subString))
-		}
-		attr, err = utils.GetTrackAttributes(tracks, t.Token)
-		if err != nil {
-			if err.Error() == "Only valid bearer authentication supported" || err.Error() == "The access token expired" {
-				fmt.Println(err)
-				return &appError{err, err.Error(), 401}
-			}
+	seeds = utils.SeedGenre(t.Genre)
+	attr, err = utils.GetTrackAttributes(tracks, t.Token)
+	if err != nil {
+		if err.Error() == "Only valid bearer authentication supported" || err.Error() == "The access token expired" {
 			fmt.Println(err)
-			return &appError{err, err.Error(), 400}
+			return &appError{err, err.Error(), 401}
 		}
-		fmt.Println("With analysis of tracks")
-		seeds = utils.Seed(nil, tracks)
-	} else {
-		recentlyPlayed := &Spotify.RecentlyPlayedOptions{Limit: 50}
-		tracks, err := Spotify.GetRecentlyPlayedTracksOpt(t.Token, recentlyPlayed)
-		if err != nil {
-			if err.Error() == "Only valid bearer authentication supported" || err.Error() == "The access token expired" {
-				fmt.Println(err)
-				return &appError{err, err.Error(), 401}
-			}
-			fmt.Println(err)
-			return &appError{err, err.Error(), 400}
-		}
-		seeds = utils.Seed(tracks, nil)
+		fmt.Println(err)
+		return &appError{err, err.Error(), 400}
 	}
+
 	options := &Spotify.Options{
 		Limit: 20,
 	}
 
-	// There might be occasions when this returns > 5 values, which is OK.
 	recommendations, err := Spotify.GetRecommendations(seeds, attr, options, t.Token)
 	if err != nil {
 		fmt.Println(err)
@@ -210,6 +133,56 @@ func Recommendations(w http.ResponseWriter, r *http.Request) *appError {
 	return nil
 }
 
+func RecommendationsHistory(w http.ResponseWriter, r *http.Request) *appError {
+	var t Spotify.UserInfo
+	var attr *Spotify.TrackAttributes
+	var err error
+	var seeds Spotify.Seeds
+	var tracks []string
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&t); err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error trying to decode JSON body.", 400}
+	}
+	defer r.Body.Close()
+
+	for _, val := range t.URITracks {
+		runes := []rune(val)
+		subString := runes[14:]
+		fmt.Println(string(subString))
+		tracks = append(tracks, string(subString))
+	}
+
+	seeds = utils.SeedTrack(t.Token, tracks)
+	attr, err = utils.GetTrackAttributes(tracks, t.Token)
+	if err != nil {
+		if err.Error() == "Only valid bearer authentication supported" || err.Error() == "The access token expired" {
+			fmt.Println(err)
+			return &appError{err, err.Error(), 401}
+		}
+		fmt.Println(err)
+		return &appError{err, err.Error(), 400}
+	}
+
+	options := &Spotify.Options{
+		Limit: 20,
+	}
+
+	recommendations, err := Spotify.GetRecommendations(seeds, attr, options, t.Token)
+	if err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error trying to retrieve recommendations.", 400}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(recommendations)
+	if err != nil {
+		fmt.Println(err)
+		return &appError{err, "Error encoding data to JSON", 400}
+	}
+	return nil
+}
+
 func TrackAnalysis(w http.ResponseWriter, r *http.Request) *appError {
 	decoder := json.NewDecoder(r.Body)
 	var t Spotify.UserInfo
@@ -219,8 +192,8 @@ func TrackAnalysis(w http.ResponseWriter, r *http.Request) *appError {
 	}
 	defer r.Body.Close()
 
-	if t.UriTracks != nil {
-		attributes, err := Spotify.GetAudioFeatures(t.UriTracks, t.Token)
+	if t.URITracks != nil {
+		attributes, err := Spotify.GetAudioFeatures(t.URITracks, t.Token)
 		if err != nil {
 			fmt.Println(err)
 			return &appError{err, "There was an error trying to analyze tracks.", 400}
@@ -254,7 +227,7 @@ func CreateLog(w http.ResponseWriter, r *http.Request) *appError {
 
 func FindLogById(w http.ResponseWriter, r *http.Request) *appError {
 	params := mux.Vars(r)
-	log, err := dao.FindById(params["id"])
+	log, err := dao.FindByID(params["id"])
 	if err != nil {
 		fmt.Println(err)
 		return &appError{err, "Could not find document with specified id.", http.StatusNoContent}
