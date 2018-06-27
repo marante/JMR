@@ -95,7 +95,7 @@ func RecommendationsGenre(w http.ResponseWriter, r *http.Request) *appError {
 	seeds = utils.SeedGenre(t.Genre)
 
 	options := &Spotify.Options{
-		Limit: 20,
+		Limit: 10,
 	}
 
 	recommendations, err := Spotify.GetRecommendations(seeds, nil, options, t.Token)
@@ -154,7 +154,7 @@ func RecommendationsHistory(w http.ResponseWriter, r *http.Request) *appError {
 	}
 
 	options := &Spotify.Options{
-		Limit: 20,
+		Limit: 10,
 	}
 
 	recommendations, err := Spotify.GetRecommendations(seeds, attr, options, t.Token)

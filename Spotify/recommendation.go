@@ -73,7 +73,7 @@ func setSeedValues(seeds Seeds, v url.Values) {
 		v.Set("seed_tracks", strings.Join(toStringSlice(seeds.Tracks), ","))
 	}
 	if seeds.Genre != "" {
-		v.Set("seed_genres", seeds.Genre)
+		v.Set("seed_genres", strings.ToLower(seeds.Genre))
 	}
 
 	fmt.Println(v)
